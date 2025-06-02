@@ -1,0 +1,5 @@
+influxdb
+jsonschema
+pyyaml
+ruuvitag_sensor==2.3.1
+thingspeak
