@@ -1,9 +1,7 @@
-"""
-Module for writing data to different cloud services.
-"""
+"""Module for writing data to different cloud services."""
 
 import logging
-from typing import Callable
+from collections.abc import Callable
 
 import thingspeak
 
@@ -20,8 +18,7 @@ class CloudWriterError(Exception):
 
 
 def write_thingspeak(config: Configuration, data: RuuviTagSensorData) -> None:
-    """
-    Write data to ThingSpeak channel.
+    """Write data to ThingSpeak channel.
 
     :param config: Configuration object containing ThingSpeak settings
     :param data: Sensor data from Ruuvitag sensor with mac and sensor data tuple.
@@ -35,12 +32,16 @@ def write_thingspeak(config: Configuration, data: RuuviTagSensorData) -> None:
         if key in data
     }
 
-    logger.info((f"Write fields thingspeak/{config.thingspeak.channel_id} = {fields}"))
+    logger.info(f"Write fields thingspeak/{config.thingspeak.channel_id} = {fields}")
 
     try:
         channel = thingspeak.Channel(
             id=config.thingspeak.channel_id, api_key=config.thingspeak.api_key
         )
         response = channel.update(fields)
+        if response == 0:
+            raise CloudWriterError("ThingSpeak update returned 0 — write failed")
+    except CloudWriterError:
+        raise
     except Exception as e:
-        raise CloudWriterError(e) from e
+        raise CloudWriterError(f"ThingSpeak error: {e}") from e

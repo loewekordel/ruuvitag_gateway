@@ -1,6 +1,4 @@
-"""
-This module provides a mapping of service names to their respective write functions.
-"""
+"""Mapping of service names to their respective write functions."""
 
 from .cloud import write_thingspeak
 from .database import write_influxdb

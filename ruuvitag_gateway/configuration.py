@@ -1,12 +1,10 @@
-"""
-Configuration module for the ruuvitag server application.
-This module defines the configuration classes and functions to load
-the configuration from a YAML file.
+"""Configuration module for the ruuvitag server application.
+
+Defines the configuration classes and functions to load the configuration from a YAML file.
 """
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 import jsonschema
 import yaml
@@ -86,8 +84,7 @@ class ConfigurationError(Exception):
 
 @dataclass
 class InfluxDBDatabase:
-    """
-    Configuration for a single InfluxDB database.
+    """Configuration for a single InfluxDB database.
 
     :param name: The name of the database.
     :param measurement: The measurement name within the database.
@@ -99,8 +96,7 @@ class InfluxDBDatabase:
 
 @dataclass
 class InfluxDBConfiguration:
-    """
-    Configuration for InfluxDB connection.
+    """Configuration for InfluxDB connection.
 
     :param host: The InfluxDB host.
     :param port: The InfluxDB port.
@@ -114,8 +110,7 @@ class InfluxDBConfiguration:
 
 @dataclass
 class ThingspeakConfiguration:
-    """
-    Configuration for ThingSpeak.
+    """Configuration for ThingSpeak.
 
     :param channel_id: The ThingSpeak channel ID.
     :param api_key: The ThingSpeak API key.
@@ -129,8 +124,7 @@ class ThingspeakConfiguration:
 
 @dataclass
 class RuuviTagDevice:
-    """
-    Configuration for a single RuuviTag device.
+    """Configuration for a single RuuviTag device.
 
     :param mac: The MAC address of the RuuviTag.
     :param name: The name of the RuuviTag.
@@ -142,8 +136,7 @@ class RuuviTagDevice:
 
 @dataclass
 class RuuviTagConfiguration:
-    """
-    Configuration for the RuuviTag module.
+    """Configuration for the RuuviTag module.
 
     :param device: The RuuviTag device configuration.
     """
@@ -153,21 +146,19 @@ class RuuviTagConfiguration:
 
 @dataclass
 class ServicesConfiguration:
-    """
-    Configuration for service selection.
+    """Configuration for service selection.
 
     :param database: Name of the database service to use.
     :param cloud: Name of the cloud service to use.
     """
 
-    database: Optional[str] = None
-    cloud: Optional[str] = None
+    database: str | None = None
+    cloud: str | None = None
 
 
 @dataclass
 class Configuration:
-    """
-    Top-level configuration.
+    """Top-level configuration.
 
     :param ruuvitag: RuuviTag configuration object.
     :param services: Services configuration object.
@@ -176,21 +167,20 @@ class Configuration:
     """
 
     ruuvitag: RuuviTagConfiguration
-    services: Optional[ServicesConfiguration] = None
-    influxdb: Optional[InfluxDBConfiguration] = None
-    thingspeak: Optional[ThingspeakConfiguration] = None
+    services: ServicesConfiguration | None = None
+    influxdb: InfluxDBConfiguration | None = None
+    thingspeak: ThingspeakConfiguration | None = None
 
 
 def load_configuration_from_file(config_file: Path) -> Configuration:
-    """
-    Loads the configuration from a YAML file and returns a Configuration object.
+    """Load the configuration from a YAML file and return a Configuration object.
 
     :param config_file: Path to the YAML configuration file.
     :return: Configuration object with InfluxDB, ThingSpeak, and RuuviTag settings.
     :raises ConfigurationError: If the file is not found or if there are parsing errors.
     """
     try:
-        with open(config_file, "r") as f:
+        with open(config_file) as f:
             data = yaml.safe_load(f)
 
         # Validate the configuration against the schema
@@ -198,13 +188,13 @@ def load_configuration_from_file(config_file: Path) -> Configuration:
             jsonschema.validate(instance=data, schema=CONFIGURATION_SCHEMA)
         except jsonschema.ValidationError as e:
             raise ConfigurationError(
-                (
+                
                     f"Configuration validation error: {e.message}\n"
                     f"Schema ["
                     f"{'.'.join(map(str, list(e.schema_path)[1:-1]))}]:\n"
                     f"{e.schema}\n"
                     f"Instance:\n{e.instance}"
-                )
+                
             ) from e
 
         # Get the influxdb configuration if it exists

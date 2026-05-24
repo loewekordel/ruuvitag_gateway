@@ -96,7 +96,7 @@ Alternatively, you can use the provided shell script to run the notifier (setup 
 ```
 
 ## Logging
-Logs are stored in a file named `ruuvitag_gateway.log` in the same directory as the script. Logs are rotated daily, and up to 14 days of logs are retained.
+Logs are stored in a file named `ruuvitag_gateway.log` in the same directory as the script. Logs are rotated by size (100 KB), and up to 10 backup files are retained.
 
 ## Deployment
 To run the script periodically, you can use a cron job. For example, to execute the script every hour:

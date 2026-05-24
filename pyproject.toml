@@ -1,0 +1,19 @@
+[project]
+name = "ruuvitag-gateway"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "influxdb",
+    "jsonschema",
+    "pyyaml",
+    "ruuvitag_sensor==2.3.1",
+    "thingspeak",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "C90", "N", "D", "PL", "RUF"]
+ignore = ["D100", "D104"]

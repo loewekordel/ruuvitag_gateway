@@ -1,17 +1,14 @@
-"""
-RuuviTag Sensor Data Logger
-This script collects data from a RuuviTag sensor and logs it to InfluxDB and ThingSpeak.
+"""RuuviTag Sensor Data Logger.
+
+Collect data from a RuuviTag sensor and log it to InfluxDB and ThingSpeak.
 """
 
 import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from ruuvitag_gateway.configuration import Configuration
-from ruuvitag_gateway.configuration import ConfigurationError
-from ruuvitag_gateway.configuration import load_configuration_from_file
-from ruuvitag_gateway.gateway import RuuviTagGateway
-from ruuvitag_gateway.gateway import RuuviTagGatewayError
+from ruuvitag_gateway.configuration import Configuration, ConfigurationError, load_configuration_from_file
+from ruuvitag_gateway.gateway import RuuviTagGateway, RuuviTagGatewayError
 from ruuvitag_gateway.services import SERVICE_MAP
 
 __version__ = "0.1.0"
@@ -19,13 +16,12 @@ __version__ = "0.1.0"
 logger = logging.getLogger(__name__)
 
 SCRIPT_NAME = "ruuvitag_gateway"
-LOG_FILE_SIZE = 100 * 1024  # 2 KB
+LOG_FILE_SIZE = 100 * 1024  # 100 KB
 LOG_BACKUP_COUNT = 10  # Number of backup log files to keep
 
 
 def configure_logging(log_name: str, debug: bool = False) -> None:
-    """
-    Configures logging to use a rotating file handler.
+    """Configure logging to use a rotating file handler.
 
     :param log_name: The name of the log file.
     """
@@ -60,8 +56,7 @@ def configure_logging(log_name: str, debug: bool = False) -> None:
 
 
 def main() -> int:
-    """
-    Main function.
+    """Run the RuuviTag gateway.
 
     :return: Exit code, 0 for success, 1 for failure.
     """
@@ -89,6 +84,10 @@ def main() -> int:
 
     except RuuviTagGatewayError as e:
         logger.error(e)
+        return 1
+    except ExceptionGroup as eg:
+        for exc in eg.exceptions:
+            logger.error(exc)
         return 1
 
     return 0
