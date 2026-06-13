@@ -3,12 +3,15 @@
 Handles RuuviTag sensor data and writes it to cloud services or databases.
 """
 
-from ruuvitag_sensor.ruuvi import RunFlag, RuuviTagSensor
-from ruuvitag_sensor.ruuvi_types import MacAndSensorData
+import asyncio
+import logging
 
-from .cloud import CloudWriter, CloudWriterError
-from .configuration import Configuration
-from .database import DatabaseWriter, DatabaseWriterError
+from ruuvitag_sensor.ruuvi import RuuviTagSensor
+
+from .configuration import Configuration, RuuviTagDevice
+from .writer import Writer, WriterError
+
+logger = logging.getLogger(__name__)
 
 
 class RuuviTagGatewayError(Exception):
@@ -16,65 +19,49 @@ class RuuviTagGatewayError(Exception):
 
 
 class RuuviTagGateway:
-    """RuuviTagGateway class to handle the RuuviTag sensor data and write it to InfluxDB and ThingSpeak."""
+    """Collects one reading per configured device and writes it to all registered writers."""
 
-    def __init__(
-        self,
-        config: Configuration,
-        db_writer: DatabaseWriter | None,
-        cloud_writer: CloudWriter | None,
-    ):
-        """Initialize the RuuviTagGateway with configuration and optional writers.
+    def __init__(self, config: Configuration, writers: list[Writer]):
+        """Initialize the gateway.
 
-        :param config: Configuration object containing settings for the gateway.
-        :param db_writer: Function to write data to the database (InfluxDB).
-        :param cloud_writer: Function to write data to the cloud (ThingSpeak).
+        :param config: The gateway configuration.
+        :param writers: A list of writers to which sensor data will be written.
         """
-        self.config = config
-        self.db_writer = db_writer
-        self.cloud_writer = cloud_writer
-        self._run_flag = RunFlag()
-
-    def callback(self, data: MacAndSensorData) -> None:
-        """Handle environment data received from RuuviTagSensor.
-
-        :param data: Tuple containing MAC address and sensor data.
-        :raises ExceptionGroup: If writing to database or cloud fails.
-        """
-        mac = data[0]
-        sensor_data = data[1]
-        exceptions: list[Exception] = []
-
-        if self.db_writer:
-            try:
-                self.db_writer(self.config, sensor_data)
-            except DatabaseWriterError as e:
-                exceptions.append(e)
-
-        if self.cloud_writer:
-            try:
-                self.cloud_writer(self.config, sensor_data)
-            except CloudWriterError as e:
-                exceptions.append(e)
-
-        self._run_flag.running = False
-
-        if exceptions:
-            raise ExceptionGroup(f"sensor[{mac}] write errors", exceptions)
+        self.config: Configuration = config
+        self.writers: list[Writer] = writers
+        self._mac_to_device: dict[str, RuuviTagDevice] = {
+            d.mac.upper(): d for d in config.ruuvitag.devices
+        }
 
     def run(self) -> None:
-        """Run the RuuviTagSensor to collect data and call the callback function.
+        """Scan for all configured devices, then pass each reading to every registered writer.
 
-        :raises RuuviTagGatewayError: If there is an error in RuuviTagSensor.
+        :raises RuuviTagGatewayError: If the BLE scan fails.
+        :raises ExceptionGroup: If any writer fails.
         """
+        macs: list[str] = [d.mac for d in self.config.ruuvitag.devices]
         try:
-            RuuviTagSensor.get_data(
-                self.callback,
-                [self.config.ruuvitag.device.mac],
-                self._run_flag,
+            results = asyncio.run(
+                RuuviTagSensor.get_data_for_sensors_async(
+                    macs=macs,
+                    search_duration_sec=self.config.ruuvitag.scan_duration_sec,
+                )
             )
         except RuntimeError as e:
-            raise RuuviTagGatewayError(
-                f"Error in RuuviTagSensor "
-                f"{self.config.ruuvitag.device.name}[{self.config.ruuvitag.device.mac}]: {e}"
-            ) from e
+            raise RuuviTagGatewayError(f"BLE scan failed: {e}") from e
+
+        exceptions: list[Exception] = []
+        for mac, sensor_data in results.items():
+            device: RuuviTagDevice | None = self._mac_to_device.get(mac.upper())
+            if device is None:
+                logger.debug("unknown mac %s, skipping", mac)
+                continue
+
+            for writer in self.writers:
+                try:
+                    writer(self.config, device, mac, sensor_data)
+                except WriterError as e:
+                    exceptions.append(e)
+
+        if exceptions:
+            raise ExceptionGroup("sensor write errors", exceptions)

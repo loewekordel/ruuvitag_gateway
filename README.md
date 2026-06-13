@@ -28,32 +28,32 @@ pip install -r requirements.txt
 
 ## Configuration
 Create a `config.yaml` file in the project root.
-Below is an example with explanations for each section and option:
+Below is an abstract example with placeholders for each section and option:
 ```yaml
 ruuvitag:
   device:
-    mac: "XX:XX:XX:XX:XX:XX"      # MAC address of your RuuviTag sensor
-    name: "outdoor"               # Name for the sensor
+    mac: "AA:BB:CC:DD:EE:FF"      # Placeholder MAC address for a RuuviTag sensor
+    name: "sensor-name"           # Placeholder sensor name
 
 services:
   database: influxdb              # Database service to use (must match a key in SERVICE_MAP)
   cloud: thingspeak               # Cloud service to use (must match a key in SERVICE_MAP)
 
 influxdb:
-  host: "localhost"               # InfluxDB server hostname or IP
+  host: "influxdb.example.com"   # InfluxDB server hostname or IP
   port: 8086                      # InfluxDB server port
   database:
-    name: "databaseX"             # InfluxDB database name
-    measurement: "outdoor"        # InfluxDB measurement name
+    name: "example_db"           # InfluxDB database name
+    measurement: "example_measurement"  # InfluxDB measurement name
 
 thingspeak:
-  channelId: XXXXXX               # ThingSpeak channel ID
-  apiKey: "XXXXXXXXXXXXXXXX"      # ThingSpeak API key for writing data
+  channelId: 1234567              # ThingSpeak channel ID placeholder
+  apiKey: "YOUR_WRITE_API_KEY"    # ThingSpeak API key placeholder
   fields:                         # Mapping of sensor data keys to ThingSpeak field numbers
-    temperature: 3                # e.g., temperature data will be sent to field3
-    humidity: 4
-    pressure: 5
-    battery: 6
+    temperature: 1                # temperature data will be sent to field1
+    humidity: 2
+    pressure: 3
+    battery: 4
 ```
 
 - **Service selection:**  

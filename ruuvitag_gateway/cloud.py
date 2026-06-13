@@ -1,47 +1,42 @@
 """Module for writing data to different cloud services."""
 
 import logging
-from collections.abc import Callable
 
 import thingspeak
+from ruuvitag_sensor.ruuvi_types import SensorData
 
-from .configuration import Configuration
-from .sensor_data import RuuviTagSensorData
+from .configuration import Configuration, RuuviTagDevice
+from .writer import WriterError
 
 logger = logging.getLogger(__name__)
 
-CloudWriter = Callable[[Configuration, RuuviTagSensorData], None]
 
+def write_thingspeak(config: Configuration, device: RuuviTagDevice, mac: str, data: SensorData) -> None:
+    """Write sensor data to a ThingSpeak channel.
 
-class CloudWriterError(Exception):
-    """Custom exception for CloudWriter errors."""
-
-
-def write_thingspeak(config: Configuration, data: RuuviTagSensorData) -> None:
-    """Write data to ThingSpeak channel.
-
-    :param config: Configuration object containing ThingSpeak settings
-    :param data: Sensor data from Ruuvitag sensor with mac and sensor data tuple.
-    :raises CloudWriterError: If there is an error writing to ThingSpeak
+    :param config: Gateway configuration.
+    :param device: The configured device this reading came from.
+    :param mac: The MAC address reported by the sensor.
+    :param data: Sensor data payload.
+    :raises WriterError: If there is an error writing to ThingSpeak.
     """
-    # Prepare fields for ThingSpeak based on configuration
-    # use the configured field indexes from the configuration and map them to the data
-    fields = {
-        config.thingspeak.fields[key]: data[key]
+    # Map the sensor data to ThingSpeak fields based on the configuration.
+    fields: dict[int, float | int] = {
+        config.thingspeak.fields[key]: data[key]  # type: ignore[literal-required]
         for key in config.thingspeak.fields
         if key in data
     }
 
-    logger.info(f"Write fields thingspeak/{config.thingspeak.channel_id} = {fields}")
+    logger.info("Write thingspeak/%s device=%s fields=%s", config.thingspeak.channel_id, device.name, fields)
 
     try:
-        channel = thingspeak.Channel(
+        channel: thingspeak.Channel = thingspeak.Channel(
             id=config.thingspeak.channel_id, api_key=config.thingspeak.api_key
         )
-        response = channel.update(fields)
+        response: int = channel.update(fields)
         if response == 0:
-            raise CloudWriterError("ThingSpeak update returned 0 — write failed")
-    except CloudWriterError:
+            raise WriterError("ThingSpeak update returned 0 — write failed")
+    except WriterError:
         raise
     except Exception as e:
-        raise CloudWriterError(f"ThingSpeak error: {e}") from e
+        raise WriterError(f"ThingSpeak error: {e}") from e

@@ -11,7 +11,13 @@ from ruuvitag_gateway.configuration import Configuration, ConfigurationError, lo
 from ruuvitag_gateway.gateway import RuuviTagGateway, RuuviTagGatewayError
 from ruuvitag_gateway.services import SERVICE_MAP
 
-__version__ = "0.1.0"
+try:
+    from importlib.metadata import PackageNotFoundError, version
+    __version__ = version("ruuvitag-gateway")
+except PackageNotFoundError:
+    import tomllib
+    with open(Path(__file__).with_name("pyproject.toml"), "rb") as _f:
+        __version__ = tomllib.load(_f)["project"]["version"]
 
 logger = logging.getLogger(__name__)
 
@@ -71,15 +77,14 @@ def main() -> int:
         logger.error(f"Failed to load configuration: {e}")
         return 1
 
-    db_writer = SERVICE_MAP.get(config.services.database)
-    cloud_writer = SERVICE_MAP.get(config.services.cloud)
+    writers = [
+        writer
+        for name in (config.services.database, config.services.cloud)
+        if name and (writer := SERVICE_MAP.get(name))
+    ]
 
     try:
-        gateway: RuuviTagGateway = RuuviTagGateway(
-            config=config,
-            db_writer=db_writer,
-            cloud_writer=cloud_writer,
-        )
+        gateway: RuuviTagGateway = RuuviTagGateway(config=config, writers=writers)
         gateway.run()
 
     except RuuviTagGatewayError as e:

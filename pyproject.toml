@@ -4,9 +4,9 @@ version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
     "influxdb",
-    "jsonschema",
+    "pydantic",
     "pyyaml",
-    "ruuvitag_sensor==2.3.1",
+    "ruuvitag_sensor==4.1.0",
     "thingspeak",
 ]
 
